@@ -41,79 +41,103 @@ def get_stats(group,vars_list):
     return pd.Series(dict_out)
 
 res_dir = "../results/IcruSphere/rego30/"
+res_dir = "../results/IcruSphere/"
 
-list_prefix = [res_dir+f.split("_")[0]+"_nt_" for f in listdir(res_dir) if isfile(join(res_dir, f)) and "Dose" in f]
+df_all_dose = pd.DataFrame()
+df_all_dose_sample = pd.DataFrame()
+df_all_flux = pd.DataFrame()
 
-N_av = 5
-list_av_df_doses = [pd.DataFrame() for i in range(N_av)]
-list_av_df_flux = [pd.DataFrame() for i in range(N_av)]
-list_sum_df_N = [pd.DataFrame() for i in range(N_av)]
+#i_sample = -1
 
-for iprefix, f in enumerate(list_prefix):
-  cols_dose = extract_column_names(f+"Doses.csv")
-  df_dose = pd.read_csv(f+"Doses.csv",names=cols_dose,skiprows=len(cols_dose)+4)
-  cols_flux = extract_column_names(f+"InnerFlux.csv") 
-  df_flux = pd.read_csv(f+"InnerFlux.csv",names=cols_flux,skiprows=len(cols_flux)+4)
-  cols_N = extract_column_names(f+"N.csv") 
-  df_N = pd.read_csv(f+"N.csv",names=cols_N,skiprows=len(cols_N)+4)
+for scenario in listdir(res_dir):
+  print (scenario)
+  #i_sample = i_sample+1
+  scenario_dir = res_dir + scenario + "/"
+
+  list_prefix = [scenario_dir+f.split("_")[0]+"_nt_" for f in listdir(scenario_dir) if isfile(join(scenario_dir, f)) and "Dose" in f]
+
+  N_av = 5
+  list_av_df_doses = [pd.DataFrame() for i in range(N_av)]
+  list_av_df_flux = [pd.DataFrame() for i in range(N_av)]
+  list_sum_df_N = [pd.DataFrame() for i in range(N_av)]
+
+  for iprefix, f in enumerate(list_prefix):
+    cols_dose = extract_column_names(f+"Doses.csv")
+    df_dose = pd.read_csv(f+"Doses.csv",names=cols_dose,skiprows=len(cols_dose)+4)
+    cols_flux = extract_column_names(f+"InnerFlux.csv") 
+    df_flux = pd.read_csv(f+"InnerFlux.csv",names=cols_flux,skiprows=len(cols_flux)+4)
+    cols_N = extract_column_names(f+"N.csv") 
+    df_N = pd.read_csv(f+"N.csv",names=cols_N,skiprows=len(cols_N)+4)
 
   #df_dose = df_dose.merge(df_N,left_on="eBin",right_on="ikE")
   #df_dose.drop("ikE",axis=1,inplace=True)
 
   #df_flux = df_flux.merge(df_N,left_on="ikE",right_on="ikE")
 
-  if len(df_flux)==0 or len(df_dose)==0 or len(df_N)==0: continue
+    if len(df_flux)==0 or len(df_dose)==0 or len(df_N)==0: continue
   
-  list_av_df_doses[iprefix%N_av] = pd.concat([list_av_df_doses[iprefix%N_av],df_dose])
-  list_av_df_flux[iprefix%N_av] = pd.concat([list_av_df_flux[iprefix%N_av],df_flux])
-  list_sum_df_N[iprefix%N_av] = pd.concat([list_sum_df_N[iprefix%N_av],df_N])
+    list_av_df_doses[iprefix%N_av] = pd.concat([list_av_df_doses[iprefix%N_av],df_dose])
+    list_av_df_flux[iprefix%N_av] = pd.concat([list_av_df_flux[iprefix%N_av],df_flux])
+    list_sum_df_N[iprefix%N_av] = pd.concat([list_sum_df_N[iprefix%N_av],df_N])
 
-# Sum N by group of average
-df_N = pd.DataFrame()
-for i in range(len(list_sum_df_N)):
-  df = list_sum_df_N[i]
-  if len(df)==0: continue
-  list_sum_df_N[i] = df.groupby(["ikE"],as_index=False).sum()
-  #print (list_sum_df_N[i])
+  # Sum N by group of average
+  df_N = pd.DataFrame()
+  for i in range(len(list_sum_df_N)):
+    df = list_sum_df_N[i]
+    if len(df)==0: continue
+    list_sum_df_N[i] = df.groupby(["ikE"],as_index=False).sum()
+    #print (list_sum_df_N[i])
 
-## Divide values by N and get mean, std_up and std_down for doses
-df_dose = pd.DataFrame()
-for i,df in enumerate(list_av_df_doses):
-  #print (df)
-  if len(df)==0: continue
-  df_grouped = df.groupby(["eBin"],as_index=False).sum()
-  df_grouped = df_grouped.merge(list_sum_df_N[i],left_on="eBin",right_on="ikE")
-  df_grouped.drop("ikE",axis=1,inplace=True)
-  print (df_grouped)
+  ## Divide values by N and get mean, std_up and std_down for doses
+  df_dose = pd.DataFrame()
+  for i,df in enumerate(list_av_df_doses):
+    #print (df)
+    if len(df)==0: continue
+    df_grouped = df.groupby(["eBin"],as_index=False).sum()
+    df_grouped = df_grouped.merge(list_sum_df_N[i],left_on="eBin",right_on="ikE")
+    df_grouped.drop("ikE",axis=1,inplace=True)
+    print (df_grouped)
 
-  df_grouped["EDE"] = df_grouped["EDE"] / df_grouped["N"]
-  df_grouped["Dose"] = df_grouped["Dose"] / df_grouped["N"]
+    df_grouped["EDE"] = df_grouped["EDE"] / df_grouped["N"]
+    df_grouped["Dose"] = df_grouped["Dose"] / df_grouped["N"]
+    df_grouped["i_sample"] = i
 
-  df_dose = pd.concat([df_dose,df_grouped])
+    df_dose = pd.concat([df_dose,df_grouped])
 
-var_list = ["EDE","Dose"]
-df_dose = df_dose.groupby(by=["eBin"],as_index=False).apply(lambda x: pd.concat([get_stats(x,var_list)], axis=0))
-df_dose.to_csv("doses.csv",index=False)
-print (df_dose)
+  var_list = ["EDE","Dose"]
+  df_dose["scenario"] = scenario
+  df_all_dose_sample = pd.concat([df_all_dose_sample,df_dose])
+  df_dose_av = df_dose.groupby(by=["eBin","scenario"],as_index=False).apply(lambda x: pd.concat([get_stats(x,var_list)], axis=0))
+  df_all_dose = pd.concat([df_all_dose,df_dose_av])
 
-## Divide values by N and get mean, std_up and std_down for fluxes
-df_flux = pd.DataFrame()
-for i,df in enumerate(list_av_df_flux):
-  print (df)
-  if len(df)==0: continue
-  df_grouped = df.groupby(["ikE","okE"],as_index=False).sum()
-  df_grouped = df_grouped.merge(list_sum_df_N[i],left_on="ikE",right_on="ikE")
+  ## Divide values by N and get mean, std_up and std_down for fluxes
+  df_flux = pd.DataFrame()
+  for i,df in enumerate(list_av_df_flux):
+    if len(df)==0: continue
+    df_grouped = df.groupby(["ikE","okE"],as_index=False).sum()
+    df_grouped = df_grouped.merge(list_sum_df_N[i],left_on="ikE",right_on="ikE")
 
-  df_grouped["down"] = df_grouped["down"] / df_grouped["N"]
-  df_grouped["up"] = df_grouped["up"] / df_grouped["N"]
+    df_grouped["down"] = df_grouped["down"] / df_grouped["N"]
+    df_grouped["up"] = df_grouped["up"] / df_grouped["N"]
 
-  df_flux = pd.concat([df_flux,df_grouped])
+    df_flux = pd.concat([df_flux,df_grouped])
 
-var_list = ["up","down"]
-df_flux = df_flux.groupby(by=["ikE","okE"],as_index=False).apply(lambda x: pd.concat([get_stats(x,var_list)], axis=0))
-df_flux.drop("N",axis=1,inplace=True)
+  var_list = ["up","down"]
+  df_flux = df_flux.groupby(by=["ikE","okE"],as_index=False).apply(lambda x: pd.concat([get_stats(x,var_list)], axis=0))
+  df_flux.drop("N",axis=1,inplace=True)
 
-df_flux.sort_values(by=["ikE","okE"],ascending=True,inplace=True)
+  df_flux.sort_values(by=["ikE","okE"],ascending=True,inplace=True)
+  df_flux["scenario"] = scenario
+  df_all_flux = pd.concat([df_all_flux,df_flux])
+  df_flux.to_csv("flux.csv",index=False)
 
-df_flux.to_csv("flux.csv",index=False)
-print (df_flux)
+df_all_dose_sample = df_all_dose_sample[["scenario","i_sample","eBin","N","EDE","Dose"]]
+df_all_dose_sample.to_csv("doses_samples.csv",index=False)
+
+df_all_dose = df_all_dose[["scenario","eBin","N","EDE","EDE_b","EDE_t","Dose","Dose_b","Dose_t"]]
+df_all_dose.to_csv("doses.csv",index=False)
+
+df_all_flux = df_all_flux[["scenario","ikE","okE","up","up_b","up_t","down","down_b","down_t"]]
+df_all_flux.to_csv("flux.csv",index=False)
+
+sys.exit()

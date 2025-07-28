@@ -117,6 +117,11 @@ void MyGeometry::ConstructSDandField()
 
 void MyGeometry::SetHumanPhantom(G4String phantom_) {phantomType = phantom_;}
 
+void MyGeometry::SetLayerNumber(G4int nlay)
+{
+	nLayers = nlay;
+}
+
 void MyGeometry::SetInnerRadius(G4double innerrad)
 {
 	innerRadius = innerrad;
@@ -224,6 +229,11 @@ void MyGeometry::DefineCommands()
 	auto& phantomCmd = fMessenger->DeclareMethod("phantom",&MyGeometry::SetHumanPhantom,"Folder for results");
 	phantomCmd.SetParameterName("phantom", true);
 	phantomCmd.SetDefaultValue("IcruSphere");
+
+	fMessenger = new G4GenericMessenger(this, "/SIM/geometry/","Set layer number");
+	auto& nLayCmd = fMessenger->DeclareMethod("nlay",&MyGeometry::SetLayerNumber,"set number of layers");
+	nLayCmd.SetParameterName("nlay", true);
+	nLayCmd.SetDefaultValue("4");
 	
 	fMessenger = new G4GenericMessenger(this, "/SIM/geometry/dome1/","Set dome 1 material");
 	auto& matdome1Cmd = fMessenger->DeclareMethod("material",&MyGeometry::SetMaterialDome1,"set  material dome 1");

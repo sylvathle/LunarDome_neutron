@@ -112,6 +112,16 @@ void Materials::DefMetalAlloys()
 	Al2219 -> AddMaterial(nist->FindOrBuildMaterial("G4_Zn"),massfraction=0.001);
 	Al2219 -> AddMaterial(nist->FindOrBuildMaterial("G4_V"),massfraction=0.001);
 
+	G4double rat_mass_Hf = 0.3;
+	G4Material *Hf = nist->FindOrBuildMaterial("G4_Hf");
+	G4Material *PE = nist->FindOrBuildMaterial("G4_POLYETHYLENE");
+	G4double d_Hf = Hf->GetDensity();
+	G4double d_PE = PE->GetDensity();
+	G4double d_HfPE = 1.0/(rat_mass_Hf/d_Hf + (1-rat_mass_Hf)/d_PE);
+	HfPE = new G4Material("HfPE",d_HfPE,ncomponents=2);
+	HfPE -> AddMaterial(Hf,massfraction=rat_mass_Hf);
+	HfPE -> AddMaterial(PE,massfraction=1.0-rat_mass_Hf);
+
 }
 
 void Materials::DefHydrogenRich()

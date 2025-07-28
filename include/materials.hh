@@ -36,6 +36,7 @@ class Materials
 
 		// Metal Alloys
 		G4Material *Al2219;
+		G4Material *HfPE;
 
 		// Oxides
 		G4Material *Cr2O3;

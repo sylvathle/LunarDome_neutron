@@ -66,6 +66,7 @@ class MyGeometry : public G4VUserDetectorConstruction
 		//void DefineMaterials();
 		void SetHumanPhantom(G4String);
 		
+		void SetLayerNumber(G4int);
 		void SetInnerRadius(G4double);
 		void SetThickDome1(G4double);
 		void SetThickDome2(G4double);
@@ -113,6 +114,7 @@ class MyGeometry : public G4VUserDetectorConstruction
 		G4LogicalVolume *logicWorld, *logicAir, *logicDome1, *logicDome2, *logicDome3, *logicDome4, *logicPhantom, *fContainer_logic, *logicGround;
 		G4VPhysicalVolume *physWorld, *physAir, *physDome1, *physDome2, *physDome3, *physDome4, *physPhantom, *physGround;
 
+		G4int nLayers;
 		G4double innerRadius;
 		G4double thickDome1, out_radius1;
 		G4double thickDome2, out_radius2;
